@@ -1,36 +1,94 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from './services/api';
+
 import './global.css';
 import './App.css';
 import './Sidebar.css'
 import './Main.css';
 
+
 function App() {
+  const [ devs, setDevs ] = useState([]);
+
+  const [ github_username, setGithubUsername] = useState('');
+  const [ techs, setTechs] = useState('');
+  
+  const [ latitude, setLatiture ] = useState('');
+  const [ longitude, setLongitude ] = useState('');
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+
+        setLatiture(latitude);
+        setLongitude(longitude);
+
+      },
+      (err) => {
+        console.log(err);
+      },
+      {
+        timeout: 30000,
+      }
+    );      
+  },[]);
+
+  useEffect(() => {
+    async function loadDevs() {
+      const response = await api.get('/devs');
+
+      setDevs(response.data);
+    }
+    loadDevs();
+  }, []);
+
+  async function handleAddDev(event){
+    event.preventDefault();
+
+    const response = await api.post('/devs',{
+      github_username,
+      techs,
+      latitude,
+      longitude,
+    })
+
+    setGithubUsername('');
+    setTechs('');
+
+    setDevs([...devs, response.data.message]);
+  }
 
   return (
     <div id="app">
       <aside>
         <strong>Cadastrar</strong>
 
-        <form>
+        <form onSubmit={handleAddDev}>
           <div className="input-block">
             <label htmlFor="github_username">Usuário do Github</label>
-            <input name="github_username" id="github_username" requered/>
+            <input name="github_username" id="github_username"
+            value={github_username} 
+            onChange={e => setGithubUsername(e.target.value)} required/>
           </div>
 
           <div className="input-block">
             <label htmlFor="techs">Tecnologias</label>
-            <input name="techs" id="techs" requered/>
+            <input name="techs" id="techs"
+            value={techs} onChange={e => setTechs(e.target.value)} required/>
           </div>
 
           <div className="input-group">
             <div className="input-block">
               <label htmlFor="latitude">Latitude</label>
-              <input name="latitude" id="latitude" requered/>
+              <input type="number" name="latitude" id="latitude" 
+              value={latitude} onChange={e => setLatiture(e.target.value)} required/>
             </div>
 
             <div className="input-block">
               <label htmlFor="longitude">Longitude</label>
-              <input name="longitude" id="longitude" requered/>
+              <input type="number" name="longitude" id="longitude" 
+              value={longitude} onChange={e => setLongitude(e.target.value)} required/>
             </div>
           </div>        
 
@@ -40,53 +98,19 @@ function App() {
 
       <main>
         <ul>
-          <li className="dev-item">
-            <header>
-              <img src="https://avatars3.githubusercontent.com/u/15036533?s=460&v=4" alt="Mateus Vilione"/>
-              <div className="user-info">
-                <strong>Mateus Vilione</strong>
-                <span>Java, React Node.js</span>
-              </div>
-            </header>
-            <p>Formado em Análise e Desenvolvimento de Sistema na Fatec Rubens Lara</p>
-            <a href="https://github.com/mateusvilione">Acessar perfil no Github</a>
-          </li>
-
-          <li className="dev-item">
-            <header>
-              <img src="https://avatars3.githubusercontent.com/u/15036533?s=460&v=4" alt="Mateus Vilione"/>
-              <div className="user-info">
-                <strong>Mateus Vilione</strong>
-                <span>Java, React Node.js</span>
-              </div>
-            </header>
-            <p>Formado em Análise e Desenvolvimento de Sistema na Fatec Rubens Lara</p>
-            <a href="https://github.com/mateusvilione">Acessar perfil no Github</a>
-          </li>
-
-          <li className="dev-item">
-            <header>
-              <img src="https://avatars3.githubusercontent.com/u/15036533?s=460&v=4" alt="Mateus Vilione"/>
-              <div className="user-info">
-                <strong>Mateus Vilione</strong>
-                <span>Java, React Node.js</span>
-              </div>
-            </header>
-            <p>Formado em Análise e Desenvolvimento de Sistema na Fatec Rubens Lara</p>
-            <a href="https://github.com/mateusvilione">Acessar perfil no Github</a>
-          </li>
-
-          <li className="dev-item">
-            <header>
-              <img src="https://avatars3.githubusercontent.com/u/15036533?s=460&v=4" alt="Mateus Vilione"/>
-              <div className="user-info">
-                <strong>Mateus Vilione</strong>
-                <span>Java, React Node.js</span>
-              </div>
-            </header>
-            <p>Formado em Análise e Desenvolvimento de Sistema na Fatec Rubens Lara</p>
-            <a href="https://github.com/mateusvilione">Acessar perfil no Github</a>
-          </li>
+          {devs.map(dev => (
+            <li key={dev._id} className="dev-item">
+              <header>
+                <img src={dev.avatar_url} alt={dev.name}/>
+                <div className="user-info">
+                  <strong>{dev.name}</strong>
+                  <span>{dev.techs.join(', ')}</span>
+                </div>
+              </header>
+              <p>{dev.bio}</p>
+              <a href={`https://github.com/${dev.github_username}`}>Acessar perfil no Github</a>
+            </li>
+          ))}
         </ul>
       </main>
     </div>
